@@ -8,6 +8,8 @@ import RootPage from '../pages/RootPage'
 import EnsemblePage from '../pages/EnsemblePage'
 import SymphonyPage from '../pages/SymphonyPage'
 
+import MusicBox from '../components/MusicBox'
+
 Vue.use(Router)
 
 export default new Router({
@@ -15,7 +17,7 @@ export default new Router({
     {
       path: '/',
       name: 'IndexPage',
-      component: IndexPage
+      component: MusicBox
     },
     {
       path: '/ensemble',

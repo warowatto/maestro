@@ -11,12 +11,12 @@
     <div>
         <!--음악플레이 시간-->
         <div class="time cf">   
-            <p id="playTime"></p>
+            <p id="playTime">{{ playTime }}</p>
             <div>
-                <progress id="music_progress" max="100%"></progress>
+                <progress id="music_progress" ref="musicProgress" v-on:click="explorer" :value="player.currentTime" :max="player.totalTime"></progress>
             </div>
             
-            <p id="totalPlayTime"></p>
+            <p id="totalPlayTime">{{ totalTime }}</p>
             
         </div>
         <!--음악플레이 시간-->
@@ -25,13 +25,13 @@
         <div class="play_btn cf">
             
             <div class="btns cf">
-                <a class="prev_btn" href="#" id="prev">
+                <a v-on:dblclick="firstPosition" class="prev_btn" href="#" id="prev">
                     <img src="../assets/prev_btn.png" alt="이전버튼">
                 </a>
-                <a class="play_btn" href="#" id="play">
+                <a v-show="!player.isPlay" v-on:click="playToggle" class="play_btn" href="#" id="play">
                     <img src="../assets/play_btn.png" alt="플레이버튼">
                 </a>
-                <a class="pause_btn" href="#" id="pause">
+                <a v-show="player.isPlay" v-on:click="playToggle" class="pause_btn" href="#" id="pause">
                     <img src="../assets/pause_btn.png" alt="일시정지버튼">
                 </a>
                 <a class="next_btn" href="#" id="next">
@@ -41,7 +41,7 @@
             
             <div class="volume cf">
                 <img src="../assets/volume_icon.png" alt="볼륨아이콘">
-                <progress id="volum_progress" value="0" max="1"></progress>
+                <progress ref="volumProgress" @click="changeVolume" id="volum_progress" :value="player.volume" max="1"></progress>
             </div>
             
         </div>
@@ -49,14 +49,114 @@
         
     </div>
     <!--음악 플레이 박스 영역-->
-                
 </div>
 <!--음악재생 박스영역-->
 </template>
 
 <script>
 export default {
-  props: ["music"]
+  name: "music-player",
+  props: ["music"],
+  data() {
+    return {
+      myAudio: {},
+      player: {
+        isPlay: false,
+        currentTime: 0,
+        totalTime: 0,
+        volume: 0
+      }
+    };
+  },
+  mounted() {
+    this.myAudio = new Audio(this.music);
+  },
+  methods: {
+    // 재생 / 일시정지
+    playToggle() {
+      if (!this.player.isPlay) {
+        this.myAudio.play();
+      } else {
+        this.myAudio.pause();
+      }
+
+      this.player.isPlay = !this.player.isPlay;
+    },
+    // 곡의 처음으로
+    firstPosition() {
+      this.myAudio.currentTime = 0;
+    },
+    // 다음곡 재생
+    nextMusic() {},
+    // 볼륨조절
+    changeVolume(event) {
+      let progress = this.$refs.volumProgress;
+      let value = (event.pageX - progress.offsetLeft) / progress.offsetWidth;
+
+      this.myAudio.volume = value;
+      this.player.volume = value;
+
+      console.log(
+        event.pageX,
+        progress.offsetLeft,
+        progress.max,
+        progress.offsetWidth
+      );
+    },
+    explorer(event) {
+      let progress = this.$refs.musicProgress;
+      let value =
+        (event.pageX - progress.offsetLeft) *
+        progress.max /
+        progress.offsetWidth;
+
+      this.myAudio.currentTime = value;
+    },
+    // 시간 변환
+    convertTime(time) {
+      let min = (time / 60) | 0;
+      let sec = this.pad(time % 60, 2);
+      return min + ":" + sec;
+    },
+    // 0:00 초 2자리 변환
+    pad(n, width) {
+      n = n + "";
+      return n.length >= width
+        ? n
+        : new Array(width - n.length + 1).join("0") + n;
+    }
+  },
+  computed: {
+    playTime() {
+      return this.convertTime(this.player.currentTime);
+    },
+    totalTime() {
+      return this.convertTime(this.player.totalTime);
+    }
+  },
+  watch: {
+    myAudio() {
+      let self = this;
+
+      // 데이터 로딩 이벤트
+      this.myAudio.onloadeddata = function() {
+        self.player.isLoad = true;
+        self.player.volume = self.myAudio.volume;
+        self.player.totalTime = self.myAudio.duration | 0;
+      };
+
+      // 재생시간 이벤트
+      this.myAudio.ontimeupdate = function() {
+        var currentTime = self.myAudio.currentTime | 0;
+
+        self.player.currentTime = currentTime;
+      };
+
+      this.myAudio.onended = function() {
+        self.player.isPlay = false;
+      };
+    }
+  }
 };
 </script>
 
@@ -118,7 +218,6 @@ progress::-moz-progress-bar {
 .play_box div .time {
   width: 90%;
   height: 20px;
-  margin: 0 auto;
   position: relative;
 }
 .play_box div .time p {
@@ -237,99 +336,6 @@ progress::-moz-progress-bar {
 }
 /*음악정보영역 e*/
 
-/*플레이리스트 영역 s*/
-.playlist {
-  position: relative;
-  margin: 0 auto;
-  width: 90%;
-  height: 40%;
-  background-color: #f8f8f8;
-  border: 1px solid #ccc;
-  box-sizing: border-box;
-}
-.playlist .top {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 25px;
-  border-bottom: 1px solid #ccc;
-}
-
-.playlist .top p {
-  float: left;
-  font-size: 12px;
-  line-height: 25px;
-  margin: 0 0 0 10px;
-}
-
-/*셀렉트박스 영역 s*/
-.playlist .top select {
-  float: right;
-  margin: 3px 5px 0 0;
-}
-/*셀렉트박스 영역 e*/
-
-/*노래 리스트 영역 s*/
-.playlist .song_list {
-  position: absolute;
-  top: 30px;
-  width: 100%;
-  height: 77%;
-  overflow-y: scroll;
-}
-.playlist .song_list li {
-  width: 100%;
-  height: 40px;
-  background-color: #fff;
-  border-bottom: 1px solid #eee;
-  box-sizing: border-box;
-  transition: all 0.3s;
-  cursor: pointer;
-}
-.playlist .song_list li:hover {
-  background-color: #f2f2f2;
-}
-
-.playlist .song_list li input {
-  margin: 15px 10px 0 10px;
-  float: left;
-}
-.playlist .song_list li p {
-  float: left;
-}
-.playlist .song_list li p span {
-  color: #999;
-}
-.playlist .song_list li p:nth-child(2) {
-  line-height: 40px;
-}
-.playlist .song_list li p:nth-child(3) {
-  font-size: 12px;
-  line-height: 15px;
-  margin: 5px 0 0 10px;
-}
-/*노래 리스트 영역 e*/
-
-/*아래 버튼영역 s*/
-.playlist .bot_btn {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 25px;
-  background-color: #ddd;
-}
-.playlist .bot_btn input {
-  margin: 3px 5px 0 5px;
-}
-.playlist .bot_btn button {
-  height: 20px;
-}
-.playlist .bot_btn button img {
-  height: 100%;
-}
-
 /*버튼스타일 지정*/
 button {
   width: auto;
@@ -375,7 +381,6 @@ input[type="submit"] i {
   .play_box div .time {
     width: 240px;
     height: 35px;
-    margin: 0 auto;
   }
   .play_box div .time p {
     float: left;
@@ -498,93 +503,6 @@ input[type="submit"] i {
   }
   /*음악정보영역 e*/
 
-  /*플레이리스트 영역 s*/
-  .playlist {
-    margin: 0 auto;
-    width: 240px;
-    height: 30%;
-    background-color: #f8f8f8;
-    border: 1px solid #ccc;
-    box-sizing: border-box;
-  }
-  .playlist .top {
-    width: 100%;
-    height: 30px;
-    border-bottom: 1px solid #ccc;
-  }
-
-  .playlist .top p {
-    float: left;
-    font-size: 12px;
-    margin: 3px 0 0 10px;
-  }
-
-  /*셀렉트박스 영역 s*/
-  .playlist .top select {
-    height: 70%;
-    float: right;
-    margin: 1.5% 5px 0 0;
-  }
-  /*셀렉트박스 영역 s*/
-
-  /*노래 리스트 영역 s*/
-  .playlist .song_list {
-    width: 100%;
-    height: 77%;
-    overflow-y: scroll;
-  }
-  .playlist .song_list li {
-    width: 100%;
-    height: 50px;
-    background-color: #fff;
-    border-bottom: 1px solid #eee;
-    box-sizing: border-box;
-    transition: all 0.3s;
-    cursor: pointer;
-  }
-  .playlist .song_list li:hover {
-    background-color: #f2f2f2;
-  }
-
-  .playlist .song_list li input {
-    margin: 20px 10px 0 10px;
-    float: left;
-  }
-  .playlist .song_list li p {
-    float: left;
-  }
-  .playlist .song_list li p span {
-    color: #999;
-  }
-  .playlist .song_list li p:nth-child(2) {
-    line-height: 50px;
-  }
-  .playlist .song_list li p:nth-child(3) {
-    font-size: 13px;
-    line-height: 18px;
-    margin: 8px 0 0 10px;
-  }
-  /*노래 리스트 영역 e*/
-
-  /*아래 버튼영역 s*/
-  .playlist .bot_btn {
-    width: 100%;
-    height: 30px;
-    background-color: #ddd;
-  }
-  .playlist .bot_btn button {
-    float: left;
-    height: 20px;
-    margin: 5px 0 0 5px;
-    background-color: #fcfcfc;
-  }
-  .playlist .bot_btn button img {
-    height: 100%;
-  }
-  .playlist .bot_btn input {
-    float: left;
-    margin: 8px 10px 0 4%;
-  }
   /*버튼스타일 지정*/
   button {
     width: auto;
@@ -602,6 +520,4 @@ input[type="submit"] i {
 }
 /*pc 화면*/
 </style>
-
-
 
